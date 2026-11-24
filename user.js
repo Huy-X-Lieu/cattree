@@ -87,7 +87,7 @@ const processRegistrationRequest = async function(req, res){
     newUser._id = result.insertedId;
     startUserSession(req, newUser);
 
-    return res.status(201).json({'success':`Created account with username ${username}`,
+    return res.status(201).json({'ok': true,
                                 'username': newUser.username,
                                 'role': newUser.role});
 }
@@ -131,11 +131,14 @@ const processLogin = async function (req,res){
             return next(err); // regenerate failed: let server.js response with the 500 code
         }
         startUserSession(req, user); // write the data into the new session
-        return res.status(200).json({'success': 'Logged in successfully.',
+        return res.status(200).json({'ok':true,
                                     'username': user.username,
                                     'role': user.role});
     });
 }
+
+
+
 
 
 
