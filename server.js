@@ -3,18 +3,18 @@ const session                       = require('express-session');
 const path                          = require('path');
 const {connectDb}                   = require('./db');
 const {seedIfEmpty}                 = require('./seed');
-const {addUserRoutes}               = require('./user');
-//const {addEventRoutes}              = require('./envent');
+const {addUserRoutes}               = require('./users');
+const {addEventRoutes}              = require('./events');
 //const {addAdminRoutes}              = require('./admin');
 //const {addSaleRoutes, startSweeper} = require('./sales');
 
 const app = express();
 
 
-// Read JSON request bodues into req.body
+// Read JSON request bodies into req.body
 app.use(express.json());
 
-// SessionsL the cookies holdes only a random key;
+//Sessions: the cookies hold only a random key;
 // the data stays on the server.
 app.use(session({
     'secret': 'you-gotta-be-kitten-me',     // signs the cookie, so nobody can forge one
@@ -29,7 +29,7 @@ function sendPage(name){
 app.get('/', sendPage('home.html'));
 app.get('/home.html', sendPage('home.html'));
 app.get('/checkout.html', sendPage('checkout.html'));
-app.get('/events.html', sendPage('events.html'));
+app.get('/event.html', sendPage('event.html'));
 app.get('/tickets.html', sendPage('tickets.html'));
 app.get('/login.html', sendPage('login.html'));
 app.get('/register.html', sendPage('register.html'));
@@ -45,7 +45,7 @@ app.get('/ui_sales.js', sendPage('ui_sales.js'));
 
 //The JSON API: each module add its own routes
 addUserRoutes(app)
-//addEventRoutes(app)
+addEventRoutes(app)
 //addAdminRoutes(app)
 //addSaleRoutes(app)
 
@@ -55,7 +55,7 @@ addUserRoutes(app)
 
 app.use(function (err, req, res, next){
     console.log(err);
-    console.status(500).json({'error':'Something went wrong on the server.'});
+    return res.status(500).json({'error':'Something went wrong on the server.'});
 });
 
 async function main(){
@@ -67,7 +67,7 @@ async function main(){
 }
 
 main().catch( function (err){
-    console.log('Could not start. Check if MongoDB is running on 127.0.0.1.27017');
+    console.log('Could not start. Check if MongoDB is running on 127.0.0.1:27017');
     console.log(err);
     process.exit(1);
 });

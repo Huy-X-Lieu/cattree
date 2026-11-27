@@ -1,6 +1,6 @@
-const {users, events, connecDb, closeDb} = require ('./db');
+const {users, events} = require ('./db');
 const crypto = require('crypto');
-const {hashPassword} = require('./user');
+const {hashPassword} = require('./users');
 
 const demoUsers = [
   { username: "admin",   password: "admin123",   role: "admin" },
@@ -26,22 +26,22 @@ const demoUsers = [
 ];
 
 async function seedDemoData(){
-    //Configure the user collection to allow only unique documents
-    //No multiple accounts can have the same username
-    await users.createIndex({username:1}, {unique:true});
-
     // Hash user passwords before inserting accounts into the database
     const userList = demoUsers.map(({username, password,role}) => {
         const salt = crypto.randomBytes(16).toString('hex');
         const hashedPassword = hashPassword(username, password, salt);
         
-        return {username, hashedPassword, salt, role};
+        return {username, hashedPassword, salt, role,createdAt: new Date()};
     });
 
     await users.insertMany(userList);
 }
 
 async function seedIfEmpty(){
+    //Configure the user collection to allow only unique documents
+    //No multiple accounts can have the same username
+    await users.createIndex({username:1}, {unique:true});
+
     const anyUser = await users.findOne({});
     const anyEvent = await events.findOne({});
 

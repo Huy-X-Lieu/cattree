@@ -25,31 +25,52 @@ function requireAdmin (req,res,next){
     next();
 }
 
+function readCredentials(req){
+    const username = req.body?.username;
+    const password = req.body?.password;
+    //Check if username and password are null/undefined
+    if(!username || !password)
+        return {};
+
+    //Check if types of username and password are string
+    //to avoid NoSQL injection
+    if(typeof username !== 'string' || typeof password !== 'string')
+        return {};
+
+    //valid
+    return {username, password};
+}
+
+function regenerateSession(req){
+    return new Promise((resolve, reject) => {
+        req.session.regenerate(err => err ? reject(err) : resolve());
+    });
+}
+    
+
 //Called by login and register, after the password check passes.
-function startUserSession(req,user) {
+async function startUserSession(req,user) {
+    await regenerateSession(req);
+
     req.session.userId = user._id.toString();
     req.session.username = user.username;
     req.session.role = user.role;
+
 }
 
 function addUserRoutes(app){
     app.post('/api/register', processRegistrationRequest);
     app.post('/api/login', processLogin);
+    app.get('/api/me', getAccountInfo);
+    app.post('/api/logout', processLogout);
 }
 
 const processRegistrationRequest = async function(req, res){
-    const username = req?.body?.username;
-    const password = req?.body?.password;
-
+    const {username, password} = readCredentials(req);
     const usernamePattern = /^[A-Za-z][A-Za-z0-9_]{2,19}$/
 
     if (!username || !password){
         return res.status(400).json({'error':'Username and password are required.'})
-    }
-
-    // check for NoSQL injection
-    if(typeof username !== 'string' || typeof password !== 'string'){
-        return res.status(400).json({'error':'Invalid username or password.'});
     }
 
     if(!usernamePattern.test(username)){
@@ -61,31 +82,22 @@ const processRegistrationRequest = async function(req, res){
         return res.status(400).json({'error': 'Invalid password. Password must be between 8 and 128 characters long.'});
     }
 
-    try{
-        const existUsername = await users.findOne({'username':username});
-        
-        if(existUsername !== null){
-            return res.status(409).json({'error': "This username is already taken. Please choose another username."});
-        }
-    }catch(err){
-        console.error('Something went wrong while finding a username', err.message);
-        return res.status(500).json({'error':'Something went wrong while creating your account. Please try again later.'});
-    }
-
 
     const salt = crypto.randomBytes(16).toString('hex');
     const hashedPassword = hashPassword(username, password, salt);
-    const newUser = {username, hashedPassword,salt, role:'user'};
-    let result
+    const newUser = {username, hashedPassword,salt, role:'user',createdAt: new Date()};
+    let result ;
     try{
         result = await users.insertOne(newUser);
     }catch(err){
-        console.error('Something went wrong while inserting a new account into the database.', err.message);
-        return res.status(500).json({'error': 'Something went wrong while creating your account. Please try again later.'});
+        if(err.code === 11000){
+            return res.status(409).json({'error':'This username already exists. Please choose another username.'});
+        }
+        throw err;
     }
 
     newUser._id = result.insertedId;
-    startUserSession(req, newUser);
+    await startUserSession(req, newUser);
 
     return res.status(201).json({'ok': true,
                                 'username': newUser.username,
@@ -93,26 +105,13 @@ const processRegistrationRequest = async function(req, res){
 }
 
 const processLogin = async function (req,res){
-    const username = req?.body?.username;
-    const password = req?.body?.password;
+    const {username, password}  = readCredentials(req);
 
-    // check if user provide username and password
     if(!username || !password){
-        return res.status(400).json({'error': 'Username and password are required.'});
+        return res.status(400).json({'error':'Incorrect username or password'});
     }
 
-    // check for NoSQL injection
-    if(typeof username !== 'string' || typeof password !== 'string'){
-        return res.status(400).json({'error': 'Invalid username or password.'});
-    }
-    
-    let user;
-    try{
-        user = await users.findOne({'username': username});
-    }catch(err){
-        console.error('Something went wrong while looking for a user', err.message);
-        return res.status(500).json({'error':'Something went wrong. Please try again later.'});
-    }
+    let user = await users.findOne({'username': username});
 
     // check if there is an account with the given username in the database.
     if (user === null){
@@ -126,19 +125,36 @@ const processLogin = async function (req,res){
 
 
     // Logged in: remove the old session id anre generate a new one.
-    req.session.regenerate(function(err){
-        if (err){
-            return next(err); // regenerate failed: let server.js response with the 500 code
+    await startUserSession(req, user);
+    return res.status(200).json({'ok':true,
+                                'username':user.username,
+                                'role':user.role});
+}
+
+const processLogout = function (req, res){
+    req.session.destroy((err) => {
+        if (err) {
+            console.error('An error happened while removing an account session.', err.message);
+            return res.status(500).json({'ok':false,
+                                    'error': 'Something went wrong on our end. Please try again.'});
         }
-        startUserSession(req, user); // write the data into the new session
-        return res.status(200).json({'ok':true,
-                                    'username': user.username,
-                                    'role': user.role});
+        res.clearCookie('connect.sid');
+        return res.status(200).json({'ok': true});
     });
 }
 
-
-
+const getAccountInfo = function (req,res){
+    if(req.session.userId === null || req.session.userId === undefined){
+        return res.status(200).json({'ok': false,
+                                    'loggedIn': false,
+                                    'error': 'Could not identify your account'});
+    }
+    return res.status(200).json({'ok': true,
+                                'loggedIn': true,
+                                'username': req.session.username,
+                                'role': req.session.role});
+}
+                                
 
 
 

@@ -1,4 +1,4 @@
-const {requireLogin, requireAdmin} = require('./user');
+const {requireLogin, requireAdmin} = require('./users');
 
 function addAdminRoutes(app){
 
