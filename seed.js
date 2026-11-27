@@ -25,7 +25,8 @@ const demoUsers = [
   { username: "walter",  password: "walter123",  role: "user" },
 ];
 
-async function seedDemoData(){
+
+async function seedDemoUsers(){
     // Hash user passwords before inserting accounts into the database
     const userList = demoUsers.map(({username, password,role}) => {
         const salt = crypto.randomBytes(16).toString('hex');
@@ -37,6 +38,7 @@ async function seedDemoData(){
     await users.insertMany(userList);
 }
 
+
 async function seedIfEmpty(){
     //Configure the user collection to allow only unique documents
     //No multiple accounts can have the same username
@@ -46,7 +48,7 @@ async function seedIfEmpty(){
     const anyEvent = await events.findOne({});
 
     if (anyUser === null && anyEvent === null){
-        await seedDemoData();
+        await seedDemoUsers();
         console.log('Seed demo data');
     }
 }
