@@ -38,6 +38,55 @@ async function seedDemoUsers(){
     await users.insertMany(userList);
 }
 
+async function seedDemoEvents(){
+    const admin = await users.findOne({'username': 'admin'});
+    const adminId = admin._id;
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    const aWeekFromNow = Date.now() + 7 * DAY_MS;
+
+    const demoEvents = [
+        {
+            'title': 'Wildcats vs. Sun Devils Watch Party',
+            'description': 'Big screen, free popcorn, and the loudest crowd in Tucson.',
+            'venue': 'Student Union Grand Ballroom',
+            'date': new Date(aWeekFromNow),
+            'capacity': 50,
+            'seatsLeft': 50,
+            'priceCents': 1500,
+            'status': 'on_sale',
+            'createdBy': adminId,
+            'createdAt': new Date()
+        },
+        {
+            'title': 'Wilbur\'s Winter Concert',
+            'description': 'The UA Pride of Arizona band plays holiday favorites.',
+            'venue': 'Centennial Hall',
+            'date': new Date(aWeekFromNow + 1 * DAY_MS),
+            'capacity': 20,
+            'seatsLeft': 20,
+            'priceCents': 2500,
+            'status': 'on_sale',
+            'createdBy': adminId,
+            'createdAt': new Date()
+        },
+        {
+            // The race-test event: only 1 seat, so alice and bob can fight over it.
+            'title': 'Front-Row Seat: Wildcats Basketball',
+            'description': 'One courtside seat. First to hold it wins.',
+            'venue': 'McKale Center',
+            'date': new Date(aWeekFromNow + 2 * DAY_MS),
+            'capacity': 1,
+            'seatsLeft': 1,
+            'priceCents': 9900,
+            'status': 'on_sale',
+            'createdBy': adminId,
+            'createdAt': new Date()
+        }
+    ]
+
+    await events.insertMany(demoEvents);
+}
+
 
 async function seedIfEmpty(){
     //Configure the user collection to allow only unique documents
@@ -49,8 +98,9 @@ async function seedIfEmpty(){
 
     if (anyUser === null && anyEvent === null){
         await seedDemoUsers();
+        await seedDemoEvents();
         console.log('Seed demo data');
     }
 }
 
-module.exports = {seedDemoData, seedIfEmpty}
+module.exports = {seedIfEmpty}

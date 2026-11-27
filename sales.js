@@ -1,3 +1,5 @@
+const {sales} = require('./db');
+
 function addSaleRoutes(app){
 
 }

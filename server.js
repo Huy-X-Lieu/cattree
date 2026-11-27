@@ -5,7 +5,7 @@ const {connectDb}                   = require('./db');
 const {seedIfEmpty}                 = require('./seed');
 const {addUserRoutes}               = require('./users');
 const {addEventRoutes}              = require('./events');
-//const {addAdminRoutes}              = require('./admin');
+const {addAdminRoutes}              = require('./admin');
 //const {addSaleRoutes, startSweeper} = require('./sales');
 
 const app = express();
@@ -43,15 +43,15 @@ app.get('/ui_admin.js', sendPage('ui_admin.js'));
 app.get('/ui_sales.js', sendPage('ui_sales.js'));
 
 
-//The JSON API: each module add its own routes
+//The JSON API: each module adds its own routes
 addUserRoutes(app)
 addEventRoutes(app)
-//addAdminRoutes(app)
+addAdminRoutes(app)
 //addSaleRoutes(app)
 
 
-// Last: any error thrown in a route lands here, so the page always get JSON back.
-// Express knows this is the error handler because the function take four arguments.
+// Last: any error thrown in a route lands here, so the page always gets JSON back.
+// Express knows this is the error handler because the function takes four arguments.
 
 app.use(function (err, req, res, next){
     console.log(err);
