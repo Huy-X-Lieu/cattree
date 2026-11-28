@@ -32,7 +32,7 @@ function readCredentials(req){
     if(!username || !password)
         return {};
 
-    //Check if types of username and password are string
+    //Check if the types of username and password are strings
     //to avoid NoSQL injection
     if(typeof username !== 'string' || typeof password !== 'string')
         return {};

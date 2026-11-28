@@ -1,6 +1,6 @@
 const {sales, events} = require('./db');
 const {ObjectId} = require('mongodb');
-const {requireLogin} = require('./users')
+const {requireLogin} = require('./users');
 
 const HOLD_SECONDS = Number(process.env.HOLD_SECONDS) || 300;
 const SWEEP_MS = 10000;
@@ -25,7 +25,8 @@ function startSweeper(){
 function addSaleRoutes(app){
     app.post('/api/events/:id/hold', requireLogin, holdSeat);
     app.get('/api/sales/:id', requireLogin, getSale);
-
+    app.post('/api/sales/:id/confirm', requireLogin, confirmSale);
+    app.post('/api/sales/:id/release', requireLogin, releaseHeldSeat);
 }
 
 const holdSeat = async function(req,res){
@@ -117,6 +118,69 @@ const getSale = async function(req, res){
         });
 
 }
+
+const confirmSale = async function (req, res) {
+    if (!ObjectId.isValid(req.params?.id)) {
+        return res.status(404).json({'error': 'Hold not found.'});
+    }
+
+    const saleId = new ObjectId(req.params.id);
+    const userId = new ObjectId(req.session.userId);
+
+    const paymentRef = 'CATSH-' + Math.round(Math.random() * 1000000);
+    const result = await sales.updateOne(
+        {'_id': saleId, 'userId': userId, 'status': 'held', expiresAt: {'$gt': new Date()}},
+        {'$set': {'status': 'confirmed', 'paymentRef': paymentRef, confirmedAt: new Date()}});
+
+    if(result.modifiedCount === 1){
+        return res.status(200).json({'paymentRef': paymentRef});
+    }
+
+    const sale = await sales.findOne({'_id': saleId, 'userId': userId});
+
+    if (!sale) {
+        return res.status(404).json({'error': 'Hold not found'});
+    }
+
+    if (sale.status === 'confirmed') {
+        return res.status(409).json({'error': 'Already confirmed.'});
+    }
+
+    return res.status(410).json({'error': 'This hold has expired or was released.'})
+
+}
+
+const releaseHeldSeat = async function(req, res){
+    if(!ObjectId.isValid(req.params.id)){
+        return res.status(404).json({'error': 'Hold not found.'});
+    }
+
+    const saleId = new ObjectId(req.params.id);
+    const userId = new ObjectId(req.session.userId);
+
+    const sale = await sales.findOne({'_id':saleId, 'userId': userId});
+
+    if(!sale){
+        return res.status(404).json({'error': 'Hold not found.'});
+    }
+
+    const ok = await giveSeatBack(sale, 'released');
+
+    if(ok){
+        return res.status(200).json({'ok': true});
+    }
+
+    const freshSale = await sales.findOne({'_id':saleId, 'userId':userId});
+
+    if(freshSale.status === 'released'){
+        return res.status(200).json({'ok':true});
+    }
+
+    return res.status(409).json({'error': "This hold can no longer be released."})
+}
+
+
+
 
 module.exports = {addSaleRoutes, startSweeper}
 
