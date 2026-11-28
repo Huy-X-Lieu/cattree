@@ -44,7 +44,6 @@ function addAdminRoutes(app){
 }
 
 const getAllEvents = async function(req,res){
-    const currentTime = new Date();
     const upcomingEvents = await events.find({})
                                     .sort({date: 1})
                                     .toArray();

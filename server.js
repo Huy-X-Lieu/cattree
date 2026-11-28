@@ -6,7 +6,7 @@ const {seedIfEmpty}                 = require('./seed');
 const {addUserRoutes}               = require('./users');
 const {addEventRoutes}              = require('./events');
 const {addAdminRoutes}              = require('./admin');
-//const {addSaleRoutes, startSweeper} = require('./sales');
+const {addSaleRoutes, startSweeper} = require('./sales');
 
 const app = express();
 
@@ -47,7 +47,7 @@ app.get('/ui_sales.js', sendPage('ui_sales.js'));
 addUserRoutes(app)
 addEventRoutes(app)
 addAdminRoutes(app)
-//addSaleRoutes(app)
+addSaleRoutes(app)
 
 
 // Last: any error thrown in a route lands here, so the page always gets JSON back.
