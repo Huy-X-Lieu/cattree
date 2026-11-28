@@ -27,6 +27,7 @@ function addSaleRoutes(app){
     app.get('/api/sales/:id', requireLogin, getSale);
     app.post('/api/sales/:id/confirm', requireLogin, confirmSale);
     app.post('/api/sales/:id/release', requireLogin, releaseHeldSeat);
+    app.get('/api/my-tickets', requireLogin, getUserTickets)
 }
 
 const holdSeat = async function(req,res){
@@ -180,6 +181,31 @@ const releaseHeldSeat = async function(req, res){
 }
 
 
+const getUserTickets = async function(req,res){
+    const userId = new ObjectId(req.session.userId);
+    const tickets = await sales.find({'userId':userId, 'status':'confirmed'}).toArray();
+
+    const eventIds = tickets.map( ticket => new ObjectId(ticket.eventId));
+    
+    const ticketEvents = await events.find({_id: {'$in': eventIds}}).toArray();
+
+    const eventsMap = new Map();
+    ticketEvents.forEach( e => eventsMap.set(e._id.toString(), e));
+
+    tickets.forEach(ticket => ticket.event = eventsMap.get(ticket.eventId.toString()) ?? null);
+
+    const data = tickets.map(function (ticket) {
+        const { paymentRef, priceCents} = ticket
+        const saleId = ticket._id;
+        const title = ticket.event?.title ?? null;
+        const date = ticket.event?.date ?? null;
+        const eventStatus = ticket?.event?.status ?? null;
+
+        return {saleId, paymentRef, priceCents, title, date, eventStatus};
+    });
+
+    return res.status(200).json(data);
+}
 
 
 module.exports = {addSaleRoutes, startSweeper}
